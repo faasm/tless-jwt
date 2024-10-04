@@ -1,45 +1,9 @@
 use base64::{decode_config, URL_SAFE_NO_PAD};
 use rsa::pkcs1::DecodeRsaPublicKey;
+use rsa::sha2::Sha256;
 use rsa::signature::Verifier;
 use rsa::RsaPublicKey;
-use rsa::sha2::Sha256;
-use std::ffi::{CStr, c_char};
-
-/*
-#[derive(Debug, Serialize, Deserialize)]
-struct Jwk {
-    kid: String,
-    kty: String,
-    x5c: Vec<String>, // Certificate chain in x5c format
-}
-
-#[derive(Debug, Serialize, Deserialize)]
-struct Jwks {
-    keys: Vec<Jwk>,
-}
-
-fn do_fetch_jwks(url: &str) -> Result<Jwks, Box<dyn Error>> {
-    let client = Client::new();
-    let res = client.get(url).send()?;
-    let jwks: Jwks = res.json()?;
-    Ok(jwks)
-}
-
-fn fetch_jwks() {
-    // Replace with your JWKS URL
-    let jwks_url = "https://faasmattprov.eus2.attest.azure.net/certs";
-    let jwks = do_fetch_jwks(jwks_url).unwrap();
-
-    // Iterate over the keys and print out the x5c certificates
-    for key in jwks.keys {
-        println!("Key ID: {}", key.kid);
-        println!("Key Alg: {}", key.kty);
-        for (i, cert) in key.x5c.iter().enumerate() {
-            println!("Certificate {}: \n{}", i + 1, cert);
-        }
-    }
-}
-*/
+use std::ffi::{c_char, CStr};
 
 fn base64_url_decode(input: &str) -> Vec<u8> {
     decode_config(input, URL_SAFE_NO_PAD).unwrap()
@@ -57,12 +21,16 @@ fn verify_jwt_signature(jwt: &str, x5c_certs: &[&str]) -> bool {
     let signature = tmp.as_slice();
 
     for cert_pem in x5c_certs {
-        let certpem = x509_parser::pem::parse_x509_pem(cert_pem.as_bytes()).unwrap().1;
+        let certpem = x509_parser::pem::parse_x509_pem(cert_pem.as_bytes())
+            .unwrap()
+            .1;
         let certpem = certpem.parse_x509().unwrap();
         let public_key = certpem.public_key();
         let rsa_pub_key = RsaPublicKey::from_pkcs1_der(public_key.subject_public_key.data).unwrap();
-        let is_valid = rsa::pkcs1v15::VerifyingKey::<Sha256>::new(rsa_pub_key)
-                .verify(header_and_payload.as_bytes(), &signature.try_into().unwrap());
+        let is_valid = rsa::pkcs1v15::VerifyingKey::<Sha256>::new(rsa_pub_key).verify(
+            header_and_payload.as_bytes(),
+            &signature.try_into().unwrap(),
+        );
 
         if is_valid.is_ok() {
             return true;
@@ -115,4 +83,3 @@ fn main() -> Result<(), Box<dyn Error>> {
     Ok(())
 }
 */
-
