@@ -1,0 +1,16 @@
+[package]
+name = "tless-jwt"
+version = "0.1.0"
+edition = "2021"
+
+[lib]
+name="tless_jwt"
+crate-type=["staticlib"]
+path = "src/lib.rs"
+
+[dependencies]
+base64 = "0.13"
+#openssl = { version = "0.10.0", features = ["vendored"] }
+rsa = { version = "0.9.6", features = ["sha2"] }
+# sha2 = { version = "0.10.8", features = ["oid"] }
+x509-parser = { version = "0.10.0" }
