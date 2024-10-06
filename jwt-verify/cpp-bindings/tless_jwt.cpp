@@ -1,8 +1,10 @@
+#include "tless_jwt.h"
+
 #include <iostream>
 #include <string>
 
-namespace tless {
-bool verify_jwt(const std::string& jwt)
+namespace tless::jwt {
+bool verify(const std::string& jwt)
 {
     return verify_jwt(jwt.c_str());
 }
