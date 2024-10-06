@@ -97,19 +97,12 @@ MIIV2zCCFMOgAwIBAgIBATANBgkqhkiG9w0BAQsFADA1MTMwMQYDVQQDDCpodHRwczovL2ZhYXNtYXR0
 }
 
 #[no_mangle]
-pub extern "C" fn check_property(jwt_cstr: *const c_char, property_cstr: *const c_char, exp_value_ptr: *const u8, length: usize) -> bool{
+pub extern "C" fn check_property(jwt_cstr: *const c_char, property_cstr: *const c_char, exp_value_cstr: *const c_char) -> bool{
     let jwt = unsafe { CStr::from_ptr(jwt_cstr).to_str().unwrap() };
     let property = unsafe { CStr::from_ptr(property_cstr).to_str().unwrap() };
-    let exp_value = unsafe {
-        assert!(!exp_value_ptr.is_null());
-        std::slice::from_raw_parts(exp_value_ptr, length)
-    };
-    let exp_value_str = match std::str::from_utf8(exp_value) {
-        Ok(valid_str) => valid_str,
-        Err(_) => panic!("Error converting to string!"),
-    };
+    let exp_value = unsafe { CStr::from_ptr(exp_value_cstr).to_str().unwrap() };
 
-    check_jwt_property(jwt, property, exp_value_str)
+    check_jwt_property(jwt, property, exp_value)
 }
 
 /*

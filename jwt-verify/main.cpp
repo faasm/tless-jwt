@@ -28,7 +28,7 @@ int main()
     }
 
     std::string expJku = "https://faasmattprov.eus2.attest.azure.net/certs";
-    if (check_property(goodJwt.c_str(), "jku", (const uint8_t*) expJku.c_str(), expJku.size())) {
+    if (check_property(goodJwt.c_str(), "jku", expJku)) {
         std::cout << "Has property!" << std::endl;
     }
 
