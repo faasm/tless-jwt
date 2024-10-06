@@ -3,6 +3,7 @@ use rsa::pkcs1::DecodeRsaPublicKey;
 use rsa::sha2::Sha256;
 use rsa::signature::Verifier;
 use rsa::RsaPublicKey;
+use serde_json::Value;
 use std::ffi::{c_char, CStr};
 
 fn base64_url_decode(input: &str) -> Vec<u8> {
@@ -41,6 +42,35 @@ fn verify_jwt_signature(jwt: &str, x5c_certs: &[&str]) -> bool {
     false
 }
 
+fn check_jwt_property(jwt: &str, property: &str, exp_value: &str) -> bool {
+    let parts: Vec<&str> = jwt.split('.').collect();
+
+    let header_bytes = base64_url_decode(parts[0]);
+    let payload_bytes = base64_url_decode(parts[1]);
+
+    // Parse the header and payload as JSON
+    let header: Value = serde_json::from_slice(&header_bytes).unwrap();
+    let payload: Value = serde_json::from_slice(&payload_bytes).unwrap();
+
+    // Check in header
+    if let Some(obj) = header.as_object() {
+        if obj.contains_key(property) {
+            let value = obj.get(property).and_then(|value| value.as_str().map(|s| s.to_string())).unwrap();
+            return value == exp_value;
+        }
+    }
+
+    // Check in body
+    if let Some(obj) = payload.as_object() {
+        if obj.contains_key(property) {
+            let value = obj.get(property).and_then(|value| value.as_str().map(|s| s.to_string())).unwrap();
+            return value == exp_value;
+        }
+    }
+
+    false
+}
+
 #[no_mangle]
 pub extern "C" fn verify_jwt(jwt_cstr: *const c_char) -> bool {
     let x5c_certs = [
@@ -64,6 +94,15 @@ MIIV2zCCFMOgAwIBAgIBATANBgkqhkiG9w0BAQsFADA1MTMwMQYDVQQDDCpodHRwczovL2ZhYXNtYXR0
     let jwt = unsafe { CStr::from_ptr(jwt_cstr).to_str().unwrap() };
 
     verify_jwt_signature(jwt, &x5c_certs)
+}
+
+#[no_mangle]
+pub extern "C" fn check_property(jwt_cstr: *const c_char, property_cstr: *const c_char, exp_value_cstr: *const c_char) -> bool{
+    let jwt = unsafe { CStr::from_ptr(jwt_cstr).to_str().unwrap() };
+    let property = unsafe { CStr::from_ptr(property_cstr).to_str().unwrap() };
+    let exp_value = unsafe { CStr::from_ptr(exp_value_cstr).to_str().unwrap() };
+
+    check_jwt_property(jwt, property, exp_value)
 }
 
 /*

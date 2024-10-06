@@ -3,6 +3,7 @@
 
 extern "C" {
 bool verify_jwt(const char* jwt);
+bool check_property(const char* jwt, const char* property, const char* exp_value);
 }
 
 // g++ main.cpp -L./target/debug -ltless_jwt
@@ -24,6 +25,14 @@ int main()
         std::cout << "Verified!" << std::endl;
     } else {
         std::cerr << "Not verified :-(" << std::endl;
+    }
+
+    if (check_property(goodJwt.c_str(), "jku", "https://faasmattprov.eus2.attest.azure.net/certs")) {
+        std::cout << "Has property!" << std::endl;
+    }
+
+    if (!check_property(goodJwt.c_str(), "jku", "https://lolz.eus2.attest.azure.net/certs")) {
+        std::cout << "Has not got property :-(" << std::endl;
     }
 
     return 0;
