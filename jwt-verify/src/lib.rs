@@ -4,7 +4,7 @@ use rsa::sha2::Sha256;
 use rsa::signature::Verifier;
 use rsa::RsaPublicKey;
 use serde_json::Value;
-use std::ffi::{c_char, CStr};
+use std::{ffi::{c_char, CStr, CString}, ptr};
 
 fn base64_url_decode(input: &str) -> Vec<u8> {
     decode_config(input, URL_SAFE_NO_PAD).unwrap()
@@ -69,6 +69,58 @@ fn check_jwt_property(jwt: &str, property: &str, exp_value: &str) -> bool {
     }
 
     false
+}
+
+#[no_mangle]
+pub extern "C" fn get_property(jwt_cstr: *const c_char, prop_cstr: *const c_char) -> *mut c_char {
+    if jwt_cstr.is_null() || prop_cstr.is_null() {
+        return ptr::null_mut();
+    }
+
+    let jwt = match unsafe { CStr::from_ptr(jwt_cstr).to_str() } {
+        Ok(s) => s,
+        Err(_) => return ptr::null_mut(),
+    };
+
+    let prop = match unsafe { CStr::from_ptr(prop_cstr).to_str() } {
+        Ok(s) => s,
+        Err(_) => return ptr::null_mut(),
+    };
+
+    let parts: Vec<&str> = jwt.split('.').collect();
+    if parts.len() != 3 {
+        return ptr::null_mut();
+    }
+
+    let payload_bytes = base64_url_decode(parts[1]);
+
+    let payload_json: Value = match serde_json::from_slice(&payload_bytes) {
+        Ok(val) => val,
+        Err(_) => return ptr::null_mut(),
+    };
+
+    let val_opt = payload_json
+        .get(prop)
+        .and_then(|v| v.as_str())
+        .map(|s| s.to_string());
+
+    match val_opt {
+        Some(s) => match CString::new(s) {
+            Ok(cstr) => cstr.into_raw(),
+            Err(_) => ptr::null_mut(),
+        },
+        None => ptr::null_mut(),
+    }
+}
+
+/// Free a C string returned from `get_property`
+#[no_mangle]
+pub extern "C" fn free_string(s: *mut c_char) {
+    if !s.is_null() {
+        unsafe {
+            drop(CString::from_raw(s));
+        }
+    }
 }
 
 #[no_mangle]
